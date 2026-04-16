@@ -1,32 +1,31 @@
 import axios from "axios";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   try {
     const { name } = req.query;
 
-    // Missing name
-    if (!name || (typeof name === "string" && name.trim() === "")) {
+    // 400: missing name
+    if (!name || typeof name !== "string" || name.trim() === "") {
       return res.status(400).json({
         status: "error",
         message: "Name query parameter is required",
       });
     }
 
-    // Name not string
-    if (typeof name !== "string") {
-      return res.status(422).json({
-        status: "error",
-        message: "Name must be a string",
-      });
-    }
+    // call Genderize API
+    const response = await axios.get(
+      `https://api.genderize.io?name=${name}`
+    );
 
-    const response = await axios.get(`https://api.genderize.io?name=${name}`);
     const data = response.data;
 
-    // Edge case
+    // edge case
     if (!data.gender || data.count === 0) {
       return res.status(422).json({
         status: "error",
@@ -36,21 +35,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sample_size = data.count;
 
-    const result = {
-      name: data.name,
-      gender: data.gender,
-      probability: data.probability,
-      sample_size,
-      is_confident: data.probability >= 0.7 && sample_size >= 100,
-      processed_at: new Date().toISOString(),
-    };
-
+    // SUCCESS RESPONSE
     return res.status(200).json({
       status: "success",
-      data: result,
+      data: {
+        name: data.name,
+        gender: data.gender,
+        probability: data.probability,
+        sample_size,
+        is_confident:
+          data.probability >= 0.7 && sample_size >= 100,
+        processed_at: new Date().toISOString(),
+      },
     });
 
-  } catch (error) {
+  } catch (err) {
     return res.status(502).json({
       status: "error",
       message: "Upstream server error",
