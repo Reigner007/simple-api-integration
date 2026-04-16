@@ -26,12 +26,12 @@ export default async function handler(
     const data = response.data;
 
     // edge case
-    if (!data.gender || data.count === 0) {
-      return res.status(422).json({
-        status: "error",
-        message: "No prediction available for the provided name",
-      });
-    }
+    if (!data || !data.gender || typeof data.probability !== "number" || typeof data.count !== "number") {
+  return res.status(422).json({
+    status: "error",
+    message: "No prediction available for the provided name",
+  });
+}
 
     const sample_size = data.count;
 
